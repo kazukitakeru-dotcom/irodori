@@ -1,98 +1,271 @@
 /* ═══════════════════════════════════════════
-   Color Capture – script.js (revised)
+   Color Capture – script.js (v3)
 ═══════════════════════════════════════════ */
 
 // ── DOM refs ──
-const video           = document.getElementById("video");
-const canvas          = document.getElementById("captureCanvas");
-const ctx             = canvas.getContext("2d", { willReadFrequently: true });
+const video                = document.getElementById("video");
+const canvas               = document.getElementById("captureCanvas");
+const ctx                  = canvas.getContext("2d", { willReadFrequently: true });
 
-const startCameraBtn  = document.getElementById("startCameraBtn");
-const imageInput      = document.getElementById("imageInput");
+const startCameraBtn       = document.getElementById("startCameraBtn");
+const pauseCameraBtn       = document.getElementById("pauseCameraBtn");
+const imageInput           = document.getElementById("imageInput");
 
-const colorPreview    = document.getElementById("colorPreview");
-const hexValue        = document.getElementById("hexValue");
-const rgbValue        = document.getElementById("rgbValue");
-const hslValue        = document.getElementById("hslValue");
-const colorName       = document.getElementById("colorName");
+const colorPreview         = document.getElementById("colorPreview");
+const hexValue             = document.getElementById("hexValue");
+const rgbValue             = document.getElementById("rgbValue");
+const hslValue             = document.getElementById("hslValue");
+const colorNameEl          = document.getElementById("colorName");
 
-const saveColorBtn    = document.getElementById("saveColorBtn");
+const saveColorBtn         = document.getElementById("saveColorBtn");
 const savedColorsContainer = document.getElementById("savedColors");
-const sortSelect      = document.getElementById("sortSelect");
+const sortSelect           = document.getElementById("sortSelect");
 
-const paletteDisplay  = document.getElementById("paletteDisplay");
-const tapMarker       = document.getElementById("tapMarker");
-const crosshair       = document.getElementById("crosshair");
-const idleHint        = document.getElementById("idleHint");
+const paletteDisplay       = document.getElementById("paletteDisplay");
+const tapMarker            = document.getElementById("tapMarker");
+const crosshair            = document.getElementById("crosshair");
+const idleHint             = document.getElementById("idleHint");
 
-const deleteModal     = document.getElementById("deleteModal");
-const deleteModalPreview = document.getElementById("deleteModalPreview");
-const deleteModalHex  = document.getElementById("deleteModalHex");
-const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-const cancelDeleteBtn  = document.getElementById("cancelDeleteBtn");
+const deleteModal          = document.getElementById("deleteModal");
+const deleteModalPreview   = document.getElementById("deleteModalPreview");
+const deleteModalHex       = document.getElementById("deleteModalHex");
+const confirmDeleteBtn     = document.getElementById("confirmDeleteBtn");
+const cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
 
-// ── State ──
-let currentColor   = null;
-let cameraStream   = null;
-let cameraActive   = false;
+// ── App state ──
+let currentColor       = null;
+let cameraStream       = null;
+let cameraActive       = false;
+let cameraPaused       = false;
+let imageMode          = false;
 let pendingDeleteIndex = null;
-let imageLoaded    = false;
-let animFrameId    = null;
+let animFrameId        = null;
 
-// ── Color dictionary (Japanese names) ──
+// ══════════════════════════════════════════
+// COLOUR DICTIONARY
+// ══════════════════════════════════════════
 const colorDictionary = [
-    { name: "ブラック",       hex: "#000000" },
-    { name: "ホワイト",       hex: "#FFFFFF" },
-    { name: "レッド",         hex: "#FF0000" },
-    { name: "スカーレット",    hex: "#FF2400" },
-    { name: "クリムゾン",      hex: "#DC143C" },
-    { name: "ローズ",         hex: "#FF007F" },
-    { name: "コーラル",       hex: "#FF6B6B" },
-    { name: "サーモンピンク",  hex: "#FF8C8C" },
-    { name: "ピンク",         hex: "#FFC0CB" },
-    { name: "ホットピンク",    hex: "#FF69B4" },
-    { name: "マゼンタ",       hex: "#FF00FF" },
-    { name: "パープル",       hex: "#800080" },
-    { name: "バイオレット",    hex: "#8B00FF" },
-    { name: "インディゴ",      hex: "#4B0082" },
-    { name: "ネイビー",       hex: "#000080" },
-    { name: "ダークブルー",    hex: "#003366" },
-    { name: "ブルー",         hex: "#0000FF" },
-    { name: "ロイヤルブルー",  hex: "#4169E1" },
-    { name: "コーンフラワー",  hex: "#6495ED" },
-    { name: "スカイブルー",    hex: "#87CEEB" },
-    { name: "ライトブルー",    hex: "#ADD8E6" },
-    { name: "ティール",       hex: "#008080" },
-    { name: "シアン",         hex: "#00FFFF" },
-    { name: "ターコイズ",      hex: "#40E0D0" },
-    { name: "アクアマリン",    hex: "#7FFFD4" },
-    { name: "ミントグリーン",  hex: "#98FF98" },
-    { name: "ライトグリーン",  hex: "#90EE90" },
-    { name: "グリーン",       hex: "#008000" },
-    { name: "ライム",         hex: "#00FF00" },
-    { name: "フォレストグリーン", hex: "#228B22" },
-    { name: "オリーブ",       hex: "#808000" },
-    { name: "イエローグリーン", hex: "#9ACD32" },
-    { name: "イエロー",       hex: "#FFFF00" },
-    { name: "ゴールド",       hex: "#FFD700" },
-    { name: "アンバー",       hex: "#FFBF00" },
-    { name: "オレンジ",       hex: "#FFA500" },
-    { name: "ダークオレンジ",  hex: "#FF8C00" },
-    { name: "バーント",       hex: "#CC5500" },
-    { name: "ブラウン",       hex: "#8B4513" },
-    { name: "シエナ",         hex: "#A0522D" },
-    { name: "タン",           hex: "#D2B48C" },
-    { name: "ベージュ",       hex: "#F5F5DC" },
-    { name: "クリーム",       hex: "#FFFDD0" },
-    { name: "ライトグレー",    hex: "#D3D3D3" },
-    { name: "シルバー",       hex: "#C0C0C0" },
-    { name: "グレー",         hex: "#808080" },
-    { name: "ダークグレー",    hex: "#404040" },
-    { name: "チャコール",      hex: "#2D2D2D" }
+    { name: "ピュアホワイト",          hex: "#FFFFFF" },
+    { name: "スノーホワイト",          hex: "#FFFAFA" },
+    { name: "アイボリー",              hex: "#FFFFF0" },
+    { name: "クリーム",                hex: "#FFFDD0" },
+    { name: "ホワイトスモーク",        hex: "#F5F5F5" },
+    { name: "シーシェル",              hex: "#FFF5EE" },
+    { name: "フローラルホワイト",      hex: "#FFFAF0" },
+    { name: "ゴーストホワイト",        hex: "#F8F8FF" },
+    { name: "ミルクホワイト",          hex: "#FDFBF6" },
+    { name: "リネン",                  hex: "#FAF0E6" },
+    { name: "オールドレース",          hex: "#FDF5E6" },
+    { name: "ビスク",                  hex: "#FFE4C4" },
+    { name: "ブランシュアーモンド",    hex: "#FFEBCD" },
+    { name: "パパイヤホイップ",        hex: "#FFEFD5" },
+    { name: "ピーチパフ",              hex: "#FFDAB9" },
+    { name: "ミスティローズ",          hex: "#FFE4E1" },
+    { name: "ラベンダーブラッシュ",    hex: "#FFF0F5" },
+    { name: "アリスブルー",            hex: "#F0F8FF" },
+    { name: "アズール",                hex: "#F0FFFF" },
+    { name: "ミントクリーム",          hex: "#F5FFFA" },
+    { name: "ハニーデュー",            hex: "#F0FFF0" },
+    { name: "ピュアブラック",          hex: "#000000" },
+    { name: "チャコールブラック",      hex: "#1A1A1A" },
+    { name: "ジェットブラック",        hex: "#0A0A0A" },
+    { name: "オニキスブラック",        hex: "#353935" },
+    { name: "オフブラック",            hex: "#242424" },
+    { name: "ダークスレートグレー",    hex: "#2F4F4F" },
+    { name: "チャコール",              hex: "#36454F" },
+    { name: "ディムグレー",            hex: "#696969" },
+    { name: "スレートグレー",          hex: "#708090" },
+    { name: "ライトスレートグレー",    hex: "#778899" },
+    { name: "グレー",                  hex: "#808080" },
+    { name: "ダークグレー",            hex: "#A9A9A9" },
+    { name: "シルバー",                hex: "#C0C0C0" },
+    { name: "ライトグレー",            hex: "#D3D3D3" },
+    { name: "プラチナ",                hex: "#E5E4E2" },
+    { name: "アッシュグレー",          hex: "#B2BEB5" },
+    { name: "スモークグレー",          hex: "#848884" },
+    { name: "ガンメタル",              hex: "#2C3539" },
+    { name: "スチールグレー",          hex: "#43464B" },
+    { name: "パールグレー",            hex: "#C9C0BB" },
+    { name: "ピュアレッド",            hex: "#FF0000" },
+    { name: "スカーレット",            hex: "#FF2400" },
+    { name: "クリムゾン",              hex: "#DC143C" },
+    { name: "ファイアレッド",          hex: "#CE2029" },
+    { name: "カーマイン",              hex: "#960018" },
+    { name: "バーガンディ",            hex: "#800020" },
+    { name: "ワインレッド",            hex: "#722F37" },
+    { name: "マルーン",                hex: "#800000" },
+    { name: "ブラッドレッド",          hex: "#660000" },
+    { name: "ダークレッド",            hex: "#8B0000" },
+    { name: "チェリーレッド",          hex: "#DE3163" },
+    { name: "ルビーレッド",            hex: "#9B111E" },
+    { name: "ガーネットレッド",        hex: "#733635" },
+    { name: "ブリックレッド",          hex: "#CB4154" },
+    { name: "テラコッタレッド",        hex: "#C0392B" },
+    { name: "インディアンレッド",      hex: "#CD5C5C" },
+    { name: "ライトコーラル",          hex: "#F08080" },
+    { name: "サーモンレッド",          hex: "#FA8072" },
+    { name: "トマトレッド",            hex: "#FF6347" },
+    { name: "ホットピンク",            hex: "#FF69B4" },
+    { name: "ディープピンク",          hex: "#FF1493" },
+    { name: "ショッキングピンク",      hex: "#FC0FC0" },
+    { name: "ネオンピンク",            hex: "#FF6EC7" },
+    { name: "フューシャピンク",        hex: "#FF77FF" },
+    { name: "ベビーピンク",            hex: "#F4C2C2" },
+    { name: "ライトピンク",            hex: "#FFB6C1" },
+    { name: "ペールピンク",            hex: "#FADADD" },
+    { name: "ピンク",                  hex: "#FFC0CB" },
+    { name: "コーラルピンク",          hex: "#F88379" },
+    { name: "サーモンピンク",          hex: "#FF91A4" },
+    { name: "カメオピンク",            hex: "#EFBBCC" },
+    { name: "チェリーブロッサム",      hex: "#FFB7C5" },
+    { name: "モーブピンク",            hex: "#E0B0FF" },
+    { name: "ダスティピンク",          hex: "#DCAE96" },
+    { name: "ミレニアルピンク",        hex: "#F3CFC6" },
+    { name: "ヌードピンク",            hex: "#E8C8B0" },
+    { name: "プラムピンク",            hex: "#B03060" },
+    { name: "ローズクォーツ",          hex: "#F7CAC9" },
+    { name: "ローズ",                  hex: "#FF007F" },
+    { name: "ピュアオレンジ",          hex: "#FFA500" },
+    { name: "ダークオレンジ",          hex: "#FF8C00" },
+    { name: "ディープオレンジ",        hex: "#FF5722" },
+    { name: "バーントオレンジ",        hex: "#CC5500" },
+    { name: "タンジェリン",            hex: "#F28500" },
+    { name: "マンダリン",              hex: "#F37A48" },
+    { name: "パーシモン",              hex: "#EC5800" },
+    { name: "アンバー",                hex: "#FFBF00" },
+    { name: "マリーゴールド",          hex: "#EAA221" },
+    { name: "コーラルオレンジ",        hex: "#FF7F50" },
+    { name: "テラコッタ",              hex: "#E2725B" },
+    { name: "バーントシエナ",          hex: "#E97451" },
+    { name: "サフランオレンジ",        hex: "#F4A460" },
+    { name: "ピーチオレンジ",          hex: "#FFCBA4" },
+    { name: "アプリコット",            hex: "#FBCEB1" },
+    { name: "ピュアイエロー",          hex: "#FFFF00" },
+    { name: "ゴールデンイエロー",      hex: "#FFC200" },
+    { name: "レモンイエロー",          hex: "#FFF44F" },
+    { name: "バナナイエロー",          hex: "#FFE135" },
+    { name: "カナリアイエロー",        hex: "#FFEF00" },
+    { name: "ゴールド",                hex: "#FFD700" },
+    { name: "ダークゴールド",          hex: "#B8860B" },
+    { name: "ゴールデンロッド",        hex: "#DAA520" },
+    { name: "サンフラワー",            hex: "#FFC512" },
+    { name: "マスタードイエロー",      hex: "#FFDB58" },
+    { name: "バターイエロー",          hex: "#FFFACD" },
+    { name: "カーキイエロー",          hex: "#F0E68C" },
+    { name: "イエローグリーン",        hex: "#9ACD32" },
+    { name: "チャートリューズ",        hex: "#7FFF00" },
+    { name: "ライムグリーン",          hex: "#32CD32" },
+    { name: "ライム",                  hex: "#00FF00" },
+    { name: "グリーンイエロー",        hex: "#ADFF2F" },
+    { name: "スプリンググリーン",      hex: "#00FF7F" },
+    { name: "オリーブグリーン",        hex: "#6B8E23" },
+    { name: "ピュアグリーン",          hex: "#008000" },
+    { name: "フォレストグリーン",      hex: "#228B22" },
+    { name: "ダークグリーン",          hex: "#006400" },
+    { name: "ジャングルグリーン",      hex: "#29AB87" },
+    { name: "エメラルドグリーン",      hex: "#50C878" },
+    { name: "オリーブ",                hex: "#808000" },
+    { name: "ハンターグリーン",        hex: "#355E3B" },
+    { name: "セージグリーン",          hex: "#8FBC8F" },
+    { name: "ミントグリーン",          hex: "#98FF98" },
+    { name: "ペールグリーン",          hex: "#98FB98" },
+    { name: "ライトグリーン",          hex: "#90EE90" },
+    { name: "ティーグリーン",          hex: "#D0F0C0" },
+    { name: "アボカドグリーン",        hex: "#568203" },
+    { name: "パイングリーン",          hex: "#01796F" },
+    { name: "ボトルグリーン",          hex: "#006A4E" },
+    { name: "ダークシーグリーン",      hex: "#8FBC8B" },
+    { name: "シーグリーン",            hex: "#2E8B57" },
+    { name: "ミディアムシーグリーン",  hex: "#3CB371" },
+    { name: "ピュアシアン",            hex: "#00FFFF" },
+    { name: "アクア",                  hex: "#00FFFF" },
+    { name: "ライトシアン",            hex: "#E0FFFF" },
+    { name: "ターコイズ",              hex: "#40E0D0" },
+    { name: "ミディアムターコイズ",    hex: "#48D1CC" },
+    { name: "ダークターコイズ",        hex: "#00CED1" },
+    { name: "ティール",                hex: "#008080" },
+    { name: "アクアマリン",            hex: "#7FFFD4" },
+    { name: "カリビアングリーン",      hex: "#00CC99" },
+    { name: "ライトシーグリーン",      hex: "#20B2AA" },
+    { name: "ライトブルーグリーン",    hex: "#B0E0E6" },
+    { name: "ピュアブルー",            hex: "#0000FF" },
+    { name: "ミッドナイトブルー",      hex: "#191970" },
+    { name: "ネイビーブルー",          hex: "#000080" },
+    { name: "ダークネイビー",          hex: "#002147" },
+    { name: "マリンブルー",            hex: "#01386A" },
+    { name: "プルシアンブルー",        hex: "#003153" },
+    { name: "サファイアブルー",        hex: "#0F52BA" },
+    { name: "コバルトブルー",          hex: "#0047AB" },
+    { name: "ロイヤルブルー",          hex: "#4169E1" },
+    { name: "ドジャーブルー",          hex: "#1E90FF" },
+    { name: "コーンフラワーブルー",    hex: "#6495ED" },
+    { name: "スチールブルー",          hex: "#4682B4" },
+    { name: "ライトスチールブルー",    hex: "#B0C4DE" },
+    { name: "スカイブルー",            hex: "#87CEEB" },
+    { name: "ライトスカイブルー",      hex: "#87CEFA" },
+    { name: "ディープスカイブルー",    hex: "#00BFFF" },
+    { name: "ベビーブルー",            hex: "#89CFF0" },
+    { name: "ライトブルー",            hex: "#ADD8E6" },
+    { name: "パウダーブルー",          hex: "#B0E0E6" },
+    { name: "ペリウィンクルブルー",    hex: "#CCCCFF" },
+    { name: "セルリアンブルー",        hex: "#2A52BE" },
+    { name: "エレクトリックブルー",    hex: "#7DF9FF" },
+    { name: "デニムブルー",            hex: "#1560BD" },
+    { name: "カデットブルー",          hex: "#5F9EA0" },
+    { name: "スレートブルー",          hex: "#6A5ACD" },
+    { name: "ダークスレートブルー",    hex: "#483D8B" },
+    { name: "ピュアパープル",          hex: "#800080" },
+    { name: "バイオレット",            hex: "#8B00FF" },
+    { name: "ダークバイオレット",      hex: "#9400D3" },
+    { name: "ダークパープル",          hex: "#301934" },
+    { name: "インディゴ",              hex: "#4B0082" },
+    { name: "ミディアムパープル",      hex: "#9370DB" },
+    { name: "ブルーバイオレット",      hex: "#8A2BE2" },
+    { name: "ミディアムオーキッド",    hex: "#BA55D3" },
+    { name: "オーキッド",              hex: "#DA70D6" },
+    { name: "ダークオーキッド",        hex: "#9932CC" },
+    { name: "プラム",                  hex: "#DDA0DD" },
+    { name: "シスル",                  hex: "#D8BFD8" },
+    { name: "ラベンダー",              hex: "#E6E6FA" },
+    { name: "アメジスト",              hex: "#9966CC" },
+    { name: "ウィステリア",            hex: "#C9A0DC" },
+    { name: "ライラック",              hex: "#C8A2C8" },
+    { name: "マゼンタ",                hex: "#FF00FF" },
+    { name: "ダークマゼンタ",          hex: "#8B008B" },
+    { name: "ムラサキ",                hex: "#6C3082" },
+    { name: "フーシャ",                hex: "#FF00FF" },
+    { name: "ダークブラウン",          hex: "#3B1507" },
+    { name: "チョコレートブラウン",    hex: "#3D1C02" },
+    { name: "エスプレッソ",            hex: "#4A2512" },
+    { name: "コーヒーブラウン",        hex: "#6F4E37" },
+    { name: "シエナ",                  hex: "#A0522D" },
+    { name: "サドルブラウン",          hex: "#8B4513" },
+    { name: "バーントアンバー",        hex: "#8A3324" },
+    { name: "ブラウン",                hex: "#A52A2A" },
+    { name: "ライトブラウン",          hex: "#B5651D" },
+    { name: "ペルー",                  hex: "#CD853F" },
+    { name: "バーリーウッド",          hex: "#DEB887" },
+    { name: "タン",                    hex: "#D2B48C" },
+    { name: "サンディブラウン",        hex: "#F4A460" },
+    { name: "ウィート",                hex: "#F5DEB3" },
+    { name: "ベージュ",                hex: "#F5F5DC" },
+    { name: "モカ",                    hex: "#967117" },
+    { name: "カラメル",                hex: "#C68642" },
+    { name: "マホガニー",              hex: "#C04000" },
+    { name: "ローシエナ",              hex: "#D2691E" },
+    { name: "コッパー",                hex: "#B87333" },
+    { name: "ブロンズ",                hex: "#CD7F32" },
+    { name: "ゴールドブラウン",        hex: "#996515" },
+    { name: "ヘーゼルナッツ",          hex: "#8C6148" },
+    { name: "ウォルナット",            hex: "#5C3317" },
+    { name: "チェスナット",            hex: "#954535" },
+    { name: "マッシュルーム",          hex: "#B5A08E" },
+    { name: "タウプ",                  hex: "#483C32" },
+    { name: "サンド",                  hex: "#C2B280" },
 ];
 
 // ══════════════════════════════════════════
-// CAMERA
+// CAMERA CONTROLS
 // ══════════════════════════════════════════
 
 startCameraBtn.addEventListener("click", () => {
@@ -103,37 +276,42 @@ startCameraBtn.addEventListener("click", () => {
     }
 });
 
+pauseCameraBtn.addEventListener("click", () => {
+    if (!cameraActive) return;
+    if (cameraPaused) {
+        resumeCamera();
+    } else {
+        pauseCamera();
+    }
+});
+
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" }
         });
-
         cameraStream  = stream;
         cameraActive  = true;
-        imageLoaded   = false;
+        cameraPaused  = false;
+        imageMode     = false;
 
         video.srcObject = stream;
-        video.style.display = "block";
+        video.style.display  = "block";
         canvas.style.display = "none";
         idleHint.style.display = "none";
         crosshair.style.display = "block";
         tapMarker.classList.add("hidden");
-
-        // Remove image click handler
         canvas.onclick = null;
 
-        startCameraBtn.textContent = "";
         startCameraBtn.innerHTML = '<span class="btn-icon">⏹</span><span class="btn-label">カメラ停止</span>';
         startCameraBtn.classList.add("stop");
+        pauseCameraBtn.style.display = "flex";
+        pauseCameraBtn.innerHTML = '<span class="btn-icon">⏸</span><span class="btn-label">一時停止</span>';
+        pauseCameraBtn.classList.remove("active");
 
-        video.addEventListener("loadedmetadata", () => {
-            startRealtimeSampling();
-        }, { once: true });
-
-    } catch (error) {
-        alert("カメラ起動に失敗しました:\n" + error.message);
-        console.error(error);
+        video.addEventListener("loadedmetadata", startRealtimeSampling, { once: true });
+    } catch (err) {
+        alert("カメラ起動に失敗しました:\n" + err.message);
     }
 }
 
@@ -142,48 +320,80 @@ function stopCamera() {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
     }
-    cameraActive = false;
-
     if (animFrameId) {
         cancelAnimationFrame(animFrameId);
         animFrameId = null;
     }
+    cameraActive  = false;
+    cameraPaused  = false;
+    imageMode     = false;
 
-    video.srcObject = null;
+    video.srcObject     = null;
     video.style.display = "block";
     canvas.style.display = "none";
-
-    if (!imageLoaded) {
-        idleHint.style.display = "flex";
-    }
-
+    canvas.onclick = null;
     crosshair.style.display = "none";
+    tapMarker.classList.add("hidden");
+    idleHint.style.display = "flex";
 
     startCameraBtn.innerHTML = '<span class="btn-icon">📷</span><span class="btn-label">カメラ開始</span>';
     startCameraBtn.classList.remove("stop");
+    pauseCameraBtn.style.display = "none";
 
-    // Reset palette
     paletteDisplay.innerHTML = '<div class="palette-placeholder">画像を読み込むと<br>色の割合を表示します</div>';
 }
 
+function pauseCamera() {
+    cameraPaused = true;
+    if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+    }
+    if (video.videoWidth > 0) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
+    video.style.display  = "none";
+    canvas.style.display = "block";
+    crosshair.style.display = "none";
+
+    canvas.onclick = function(ev) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        sampleColor((ev.clientX - rect.left) * scaleX, (ev.clientY - rect.top) * scaleY);
+        showTapMarker(ev.clientX - rect.left, ev.clientY - rect.top);
+    };
+
+    pauseCameraBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-label">再開</span>';
+    pauseCameraBtn.classList.add("active");
+    analyzePalette();
+}
+
+function resumeCamera() {
+    cameraPaused = false;
+    canvas.onclick = null;
+    tapMarker.classList.add("hidden");
+    video.style.display  = "block";
+    canvas.style.display = "none";
+    crosshair.style.display = "block";
+    pauseCameraBtn.innerHTML = '<span class="btn-icon">⏸</span><span class="btn-label">一時停止</span>';
+    pauseCameraBtn.classList.remove("active");
+    startRealtimeSampling();
+}
+
 function startRealtimeSampling() {
-
     function update() {
-        if (!cameraActive) return;
-
+        if (!cameraActive || cameraPaused) return;
         if (video.videoWidth > 0) {
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const x = canvas.width / 2;
-            const y = canvas.height / 2;
-            sampleColor(x, y);
+            sampleColor(canvas.width / 2, canvas.height / 2);
         }
-
         animFrameId = requestAnimationFrame(update);
     }
-
     update();
 }
 
@@ -195,90 +405,70 @@ imageInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Stop camera if running
     if (cameraActive) stopCamera();
 
     const reader = new FileReader();
-
     reader.onload = function(e) {
         const img = new Image();
-
         img.onload = function() {
             canvas.width  = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
 
-            imageLoaded = true;
-            video.style.display = "none";
+            imageMode = true;
+            video.style.display  = "none";
             canvas.style.display = "block";
             idleHint.style.display = "none";
             crosshair.style.display = "none";
             tapMarker.classList.add("hidden");
 
-            // Analyse palette
+            startCameraBtn.innerHTML = '<span class="btn-icon">📷</span><span class="btn-label">カメラ開始</span>';
+            startCameraBtn.classList.remove("stop");
+            pauseCameraBtn.style.display = "none";
+
             analyzePalette();
 
-            // Tap to sample – fix coordinate mapping
             canvas.onclick = function(ev) {
                 const rect = canvas.getBoundingClientRect();
-
-                // Correct pixel coordinates accounting for CSS scaling
                 const scaleX = canvas.width  / rect.width;
                 const scaleY = canvas.height / rect.height;
-
-                const x = (ev.clientX - rect.left) * scaleX;
-                const y = (ev.clientY - rect.top)  * scaleY;
-
-                sampleColor(x, y);
-
-                // Show tap marker at CSS position
+                sampleColor((ev.clientX - rect.left) * scaleX, (ev.clientY - rect.top) * scaleY);
                 showTapMarker(ev.clientX - rect.left, ev.clientY - rect.top);
             };
         };
-
         img.src = e.target.result;
     };
-
     reader.readAsDataURL(file);
-
-    // Reset input so same file can be re-selected
     imageInput.value = "";
 });
 
-function showTapMarker(cssX, cssY) {
-    tapMarker.classList.remove("hidden");
-    tapMarker.style.left = cssX + "px";
-    tapMarker.style.top  = cssY + "px";
+// ══════════════════════════════════════════
+// TAP MARKER
+// ══════════════════════════════════════════
 
-    // Re-trigger animation
-    tapMarker.style.animation = "none";
+function showTapMarker(cssX, cssY) {
+    tapMarker.classList.add("hidden");
     requestAnimationFrame(() => {
-        tapMarker.style.animation = "";
+        tapMarker.style.left = cssX + "px";
+        tapMarker.style.top  = cssY + "px";
+        tapMarker.classList.remove("hidden");
     });
 }
 
 // ══════════════════════════════════════════
-// COLOR SAMPLING
+// COLOUR SAMPLING
 // ══════════════════════════════════════════
 
 function sampleColor(x, y) {
-    // Sample a small area (3×3) and average for stability
-    const size  = 3;
-    const half  = Math.floor(size / 2);
-    const sx    = Math.max(0, Math.round(x) - half);
-    const sy    = Math.max(0, Math.round(y) - half);
-    const sw    = Math.min(size, canvas.width  - sx);
-    const sh    = Math.min(size, canvas.height - sy);
+    const size = 5, half = Math.floor(size / 2);
+    const sx = Math.max(0, Math.round(x) - half);
+    const sy = Math.max(0, Math.round(y) - half);
+    const sw = Math.min(size, canvas.width  - sx);
+    const sh = Math.min(size, canvas.height - sy);
 
-    const data  = ctx.getImageData(sx, sy, sw, sh).data;
+    const data = ctx.getImageData(sx, sy, sw, sh).data;
     let rSum = 0, gSum = 0, bSum = 0, count = 0;
-
-    for (let i = 0; i < data.length; i += 4) {
-        rSum += data[i];
-        gSum += data[i + 1];
-        bSum += data[i + 2];
-        count++;
-    }
+    for (let i = 0; i < data.length; i += 4) { rSum += data[i]; gSum += data[i+1]; bSum += data[i+2]; count++; }
 
     const r = Math.round(rSum / count);
     const g = Math.round(gSum / count);
@@ -288,27 +478,18 @@ function sampleColor(x, y) {
     const hsl  = rgbToHsl(r, g, b);
     const name = getNearestColorName(hex);
 
-    currentColor = {
-        hex,
-        rgb:  `(${r}, ${g}, ${b})`,
-        hsl:  `(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
-        name,
-        timestamp: Date.now()
-    };
-
+    currentColor = { hex, rgb: `(${r}, ${g}, ${b})`, hsl: `(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`, name, timestamp: Date.now() };
     updateUI(currentColor);
 }
 
 function updateUI(color) {
     colorPreview.style.background = color.hex;
-
-    const previewLabel = colorPreview.querySelector(".preview-label");
-    if (previewLabel) previewLabel.remove();
-
-    hexValue.textContent  = color.hex;
-    rgbValue.textContent  = color.rgb;
-    hslValue.textContent  = color.hsl;
-    colorName.textContent = color.name;
+    const lbl = colorPreview.querySelector(".preview-label");
+    if (lbl) lbl.remove();
+    hexValue.textContent    = color.hex;
+    rgbValue.textContent    = color.rgb;
+    hslValue.textContent    = color.hsl;
+    colorNameEl.textContent = color.name;
 }
 
 // ══════════════════════════════════════════
@@ -316,39 +497,21 @@ function updateUI(color) {
 // ══════════════════════════════════════════
 
 function analyzePalette() {
-    // Sample a grid of pixels and cluster into dominant colors
-    const w = canvas.width;
-    const h = canvas.height;
-
-    const step   = Math.max(1, Math.floor(Math.min(w, h) / 40));
-    const colors = [];
+    const w = canvas.width, h = canvas.height;
+    const step = Math.max(1, Math.floor(Math.min(w, h) / 40));
+    const freq = {};
 
     for (let y = 0; y < h; y += step) {
         for (let x = 0; x < w; x += step) {
             const d = ctx.getImageData(x, y, 1, 1).data;
-            // Quantise to reduce noise
-            colors.push([
-                Math.round(d[0] / 16) * 16,
-                Math.round(d[1] / 16) * 16,
-                Math.round(d[2] / 16) * 16
-            ]);
+            const key = `${Math.round(d[0]/16)*16},${Math.round(d[1]/16)*16},${Math.round(d[2]/16)*16}`;
+            freq[key] = (freq[key] || 0) + 1;
         }
     }
 
-    // Simple frequency-based clustering
-    const freq = {};
-    for (const [r, g, b] of colors) {
-        const key = `${r},${g},${b}`;
-        freq[key] = (freq[key] || 0) + 1;
-    }
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const total  = sorted.reduce((s, [, c]) => s + c, 0);
 
-    const sorted = Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
-
-    const total = sorted.reduce((s, [, c]) => s + c, 0);
-
-    // Build palette UI
     paletteDisplay.innerHTML = "";
     const title = document.createElement("div");
     title.className = "panel-title";
@@ -357,32 +520,25 @@ function analyzePalette() {
 
     for (const [key, count] of sorted) {
         const [r, g, b] = key.split(",").map(Number);
-        const hex   = rgbToHex(r, g, b);
-        const pct   = Math.round((count / total) * 100);
-        const name  = getNearestColorName(hex);
+        const hex  = rgbToHex(r, g, b);
+        const pct  = Math.round((count / total) * 100);
+        const name = getNearestColorName(hex);
 
-        const row   = document.createElement("div");
+        const row  = document.createElement("div");
         row.className = "palette-bar-row";
 
-        const bar   = document.createElement("div");
+        const bar  = document.createElement("div");
         bar.className = "palette-bar-color";
         bar.style.background = hex;
         bar.style.width = `${Math.max(pct, 8)}%`;
         bar.title = `${name} – ${hex}`;
-
-        // Click to select this color
         bar.addEventListener("click", () => {
-            currentColor = {
-                hex,
-                rgb:  `(${r}, ${g}, ${b})`,
-                hsl:  (() => { const h = rgbToHsl(r,g,b); return `(${h.h}, ${h.s}%, ${h.l}%)`; })(),
-                name,
-                timestamp: Date.now()
-            };
+            const h2 = rgbToHsl(r, g, b);
+            currentColor = { hex, rgb: `(${r}, ${g}, ${b})`, hsl: `(${h2.h}, ${h2.s}%, ${h2.l}%)`, name, timestamp: Date.now() };
             updateUI(currentColor);
         });
 
-        const info  = document.createElement("div");
+        const info = document.createElement("div");
         info.className = "palette-bar-info";
         info.innerHTML = `<span>${hex}</span><span class="palette-percentage">${pct}%</span>`;
 
@@ -393,25 +549,19 @@ function analyzePalette() {
 }
 
 // ══════════════════════════════════════════
-// SAVE & RENDER
+// SAVE / RENDER
 // ══════════════════════════════════════════
 
 saveColorBtn.addEventListener("click", () => {
     if (!currentColor) return;
-
     const saved = getSaved();
     saved.unshift({ ...currentColor, timestamp: Date.now() });
     setSaved(saved);
     renderSavedColors();
 });
 
-function getSaved() {
-    return JSON.parse(localStorage.getItem("savedColors") || "[]");
-}
-
-function setSaved(arr) {
-    localStorage.setItem("savedColors", JSON.stringify(arr));
-}
+function getSaved() { return JSON.parse(localStorage.getItem("savedColors") || "[]"); }
+function setSaved(arr) { localStorage.setItem("savedColors", JSON.stringify(arr)); }
 
 sortSelect.addEventListener("change", renderSavedColors);
 
@@ -428,10 +578,11 @@ function renderSavedColors() {
     }
 
     if (mode === "similar") {
-        renderGrouped(sorted);
+        renderGrouped(sorted, saved);
     } else {
-        sorted.forEach((color, idx) => {
-            savedColorsContainer.appendChild(makeCard(color, idx, saved));
+        sorted.forEach(color => {
+            const origIdx = saved.findIndex(s => s.hex === color.hex && s.timestamp === color.timestamp);
+            savedColorsContainer.appendChild(makeCard(color, origIdx));
         });
     }
 }
@@ -439,18 +590,12 @@ function renderSavedColors() {
 function sortColors(arr, mode) {
     const copy = [...arr];
     switch (mode) {
-        case "date-asc":
-            return copy.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-        case "date-desc":
-            return copy.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        case "hue-asc":
-            return copy.sort((a, b) => getHue(a.hex) - getHue(b.hex));
-        case "hue-desc":
-            return copy.sort((a, b) => getHue(b.hex) - getHue(a.hex));
-        case "similar":
-            return copy.sort((a, b) => getHue(a.hex) - getHue(b.hex));
-        default:
-            return copy;
+        case "date-asc":  return copy.sort((a, b) => (a.timestamp||0) - (b.timestamp||0));
+        case "date-desc": return copy.sort((a, b) => (b.timestamp||0) - (a.timestamp||0));
+        case "hue-asc":   return copy.sort((a, b) => getHue(a.hex) - getHue(b.hex));
+        case "hue-desc":  return copy.sort((a, b) => getHue(b.hex) - getHue(a.hex));
+        case "similar":   return copy.sort((a, b) => getHue(a.hex) - getHue(b.hex));
+        default:          return copy;
     }
 }
 
@@ -459,76 +604,55 @@ function getHue(hex) {
     return rgbToHsl(r, g, b).h;
 }
 
-function renderGrouped(sorted) {
-    // Group into hue buckets
+function renderGrouped(sorted, saved) {
     const groups = {
-        "🔴 レッド系":      [],
-        "🟠 オレンジ系":    [],
-        "🟡 イエロー系":    [],
-        "🟢 グリーン系":    [],
-        "🔵 ブルー系":      [],
-        "🟣 パープル系":    [],
-        "⬛ ダーク系":      [],
-        "⬜ ライト系":      []
+        "🔴 レッド系":   [],
+        "🩷 ピンク系":   [],
+        "🟠 オレンジ系": [],
+        "🤎 ブラウン系": [],
+        "🟡 イエロー系": [],
+        "🟢 グリーン系": [],
+        "🔵 ブルー系":   [],
+        "🟣 パープル系": [],
+        "⬛ ダーク系":   [],
+        "⬜ ライト系":   [],
     };
 
     for (const color of sorted) {
         const { r, g, b } = hexToRgb(color.hex);
         const { h, s, l } = rgbToHsl(r, g, b);
 
-        if (l < 15) {
-            groups["⬛ ダーク系"].push(color);
-        } else if (l > 85) {
-            groups["⬜ ライト系"].push(color);
-        } else if (s < 20) {
-            groups["⬛ ダーク系"].push(color);
-        } else if (h < 15 || h >= 345) {
-            groups["🔴 レッド系"].push(color);
-        } else if (h < 45) {
-            groups["🟠 オレンジ系"].push(color);
-        } else if (h < 75) {
-            groups["🟡 イエロー系"].push(color);
-        } else if (h < 165) {
-            groups["🟢 グリーン系"].push(color);
-        } else if (h < 255) {
-            groups["🔵 ブルー系"].push(color);
-        } else {
-            groups["🟣 パープル系"].push(color);
-        }
+        if (l < 18)                                  { groups["⬛ ダーク系"].push(color); }
+        else if (l > 82 || s < 12)                   { groups["⬜ ライト系"].push(color); }
+        else if (h >= 10 && h < 40 && l < 55)        { groups["🤎 ブラウン系"].push(color); }
+        else if ((h >= 340 || h < 10) && s > 30)     { groups["🔴 レッド系"].push(color); }
+        else if (h >= 290 && h < 340)                { groups["🩷 ピンク系"].push(color); }
+        else if (h >= 10 && h < 45)                  { groups["🟠 オレンジ系"].push(color); }
+        else if (h >= 45 && h < 75)                  { groups["🟡 イエロー系"].push(color); }
+        else if (h >= 75 && h < 165)                 { groups["🟢 グリーン系"].push(color); }
+        else if (h >= 165 && h < 260)                { groups["🔵 ブルー系"].push(color); }
+        else                                         { groups["🟣 パープル系"].push(color); }
     }
-
-    // Get original saved for deletion index
-    const saved = getSaved();
 
     for (const [groupName, colors] of Object.entries(groups)) {
         if (colors.length === 0) continue;
-
         const label = document.createElement("div");
         label.className = "group-label";
         label.textContent = groupName;
         savedColorsContainer.appendChild(label);
-
         colors.forEach(color => {
-            const originalIdx = saved.findIndex(s =>
-                s.hex === color.hex && s.timestamp === color.timestamp
-            );
-            savedColorsContainer.appendChild(makeCard(color, originalIdx, saved));
+            const origIdx = saved.findIndex(s => s.hex === color.hex && s.timestamp === color.timestamp);
+            savedColorsContainer.appendChild(makeCard(color, origIdx));
         });
     }
 }
 
-function makeCard(color, originalIndex, savedArr) {
+function makeCard(color, originalIndex) {
     const card = document.createElement("div");
     card.className = "savedColorCard";
 
-    const hsl = (() => {
-        const { r, g, b } = hexToRgb(color.hex);
-        return rgbToHsl(r, g, b);
-    })();
-    const textColor = hsl.l > 55 ? "#111" : "#fff";
-
     card.innerHTML = `
-        <div class="savedColorPreview" style="background:${color.hex}"></div>
+        <div class="savedColorPreview" style="background:${color.hex}" title="クリックで選択"></div>
         <div class="savedColorInfo">
             <div class="saved-color-name">${color.name}</div>
             <div>${color.hex}</div>
@@ -537,14 +661,13 @@ function makeCard(color, originalIndex, savedArr) {
         <button class="deleteBtn">削除</button>
     `;
 
-    card.querySelector(".deleteBtn").addEventListener("click", () => {
-        openDeleteModal(originalIndex, color);
-    });
-
-    // Click preview to re-select color
     card.querySelector(".savedColorPreview").addEventListener("click", () => {
         currentColor = { ...color };
         updateUI(currentColor);
+    });
+
+    card.querySelector(".deleteBtn").addEventListener("click", () => {
+        openDeleteModal(originalIndex, color);
     });
 
     return card;
@@ -557,118 +680,84 @@ function makeCard(color, originalIndex, savedArr) {
 function openDeleteModal(index, color) {
     pendingDeleteIndex = index;
     deleteModalPreview.style.background = color.hex;
-    deleteModalHex.textContent = color.hex + " / " + color.name;
+    deleteModalHex.textContent = `${color.hex}  ${color.name}`;
     deleteModal.classList.remove("hidden");
+}
+
+function closeDeleteModal() {
+    pendingDeleteIndex = null;
+    deleteModal.classList.add("hidden");
 }
 
 confirmDeleteBtn.addEventListener("click", () => {
     if (pendingDeleteIndex === null) return;
-
     const saved = getSaved();
     saved.splice(pendingDeleteIndex, 1);
     setSaved(saved);
     renderSavedColors();
-
-    pendingDeleteIndex = null;
-    deleteModal.classList.add("hidden");
+    closeDeleteModal();
 });
 
-cancelDeleteBtn.addEventListener("click", () => {
-    pendingDeleteIndex = null;
-    deleteModal.classList.add("hidden");
-});
+cancelDeleteBtn.addEventListener("click", closeDeleteModal);
 
-deleteModal.addEventListener("click", (e) => {
-    if (e.target === deleteModal) {
-        pendingDeleteIndex = null;
-        deleteModal.classList.add("hidden");
-    }
+deleteModal.addEventListener("click", e => {
+    if (e.target === deleteModal) closeDeleteModal();
 });
 
 // ══════════════════════════════════════════
-// COLOUR MATH UTILITIES
+// COLOUR MATH
 // ══════════════════════════════════════════
 
 function rgbToHex(r, g, b) {
-    return "#" + [r, g, b]
-        .map(v => v.toString(16).padStart(2, "0"))
-        .join("")
-        .toUpperCase();
+    return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
 function hexToRgb(hex) {
-    const clean = hex.replace("#", "");
-    return {
-        r: parseInt(clean.substring(0, 2), 16),
-        g: parseInt(clean.substring(2, 4), 16),
-        b: parseInt(clean.substring(4, 6), 16)
-    };
+    const c = hex.replace("#", "");
+    return { r: parseInt(c.substring(0,2),16), g: parseInt(c.substring(2,4),16), b: parseInt(c.substring(4,6),16) };
 }
 
 function rgbToHsl(r, g, b) {
     r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max === min) {
-        h = s = 0;
-    } else {
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h, s, l = (max+min)/2;
+    if (max === min) { h = s = 0; } else {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
         switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
+            case r: h = (g-b)/d + (g<b?6:0); break;
+            case g: h = (b-r)/d + 2; break;
+            case b: h = (r-g)/d + 4; break;
         }
         h /= 6;
     }
-
-    return {
-        h: Math.round(h * 360),
-        s: Math.round(s * 100),
-        l: Math.round(l * 100)
-    };
+    return { h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100) };
 }
 
 function colorDistance(c1, c2) {
-    // Weighted Euclidean distance (perceptual approximation)
     const rMean = (c1.r + c2.r) / 2;
-    const dR = c1.r - c2.r;
-    const dG = c1.g - c2.g;
-    const dB = c1.b - c2.b;
-    return Math.sqrt(
-        (2 + rMean / 256) * dR * dR +
-        4 * dG * dG +
-        (2 + (255 - rMean) / 256) * dB * dB
-    );
+    const dR = c1.r-c2.r, dG = c1.g-c2.g, dB = c1.b-c2.b;
+    return Math.sqrt((2+rMean/256)*dR*dR + 4*dG*dG + (2+(255-rMean)/256)*dB*dB);
 }
 
 function getNearestColorName(hex) {
     const target = hexToRgb(hex);
-    let nearest = colorDictionary[0];
-    let minDistance = Infinity;
-
+    let nearest = colorDictionary[0], minDist = Infinity;
     for (const color of colorDictionary) {
-        const rgb = hexToRgb(color.hex);
-        const d = colorDistance(target, rgb);
-        if (d < minDistance) {
-            minDistance = d;
-            nearest = color;
-        }
+        const d = colorDistance(target, hexToRgb(color.hex));
+        if (d < minDist) { minDist = d; nearest = color; }
     }
-
     return nearest.name;
 }
 
 // ══════════════════════════════════════════
-// SERVICE WORKER
+// SERVICE WORKER & INIT
 // ══════════════════════════════════════════
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
 
-// ── Init ──
-renderSavedColors();
+pauseCameraBtn.style.display = "none";
 crosshair.style.display = "none";
+renderSavedColors();
