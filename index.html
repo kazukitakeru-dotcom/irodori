@@ -4,56 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Color Capture</title>
-
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon512.png">
-    <meta name="theme-color" content="#111111">
-
+    <meta name="theme-color" content="#0a0a0f">
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <div id="app">
 
     <header>
-        <h1>Color Capture</h1>
+        <div class="header-inner">
+            <span class="logo-icon">◈</span>
+            <h1>Color Capture</h1>
+        </div>
     </header>
 
-    <div class="controls">
-        <button id="startCameraBtn">📷 カメラ開始</button>
-        <label class="uploadLabel">
-            🖼 写真を選択
-            <input type="file" id="imageInput" accept="image/*">
-        </label>
-    </div>
+    <!-- Main workspace: side panel + viewer + side panel -->
+    <div class="workspace">
 
-    <div class="cameraContainer">
-        <video id="video" autoplay playsinline></video>
-        <canvas id="captureCanvas"></canvas>
+        <!-- LEFT PANEL: controls + color info -->
+        <aside class="side-panel left-panel">
 
-        <div id="crosshair"></div>
-    </div>
+            <div class="controls">
+                <button id="startCameraBtn" class="ctrl-btn">
+                    <span class="btn-icon">📷</span>
+                    <span class="btn-label">カメラ開始</span>
+                </button>
+                <label class="ctrl-btn uploadLabel">
+                    <span class="btn-icon">🖼</span>
+                    <span class="btn-label">写真を選択</span>
+                    <input type="file" id="imageInput" accept="image/*">
+                </label>
+            </div>
 
-    <div class="infoPanel">
+            <div class="infoPanel">
+                <div id="colorPreview">
+                    <span class="preview-label">-</span>
+                </div>
+                <div class="colorInfo">
+                    <div class="info-row">
+                        <span class="info-key">HEX</span>
+                        <span class="info-val" id="hexValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">RGB</span>
+                        <span class="info-val" id="rgbValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">HSL</span>
+                        <span class="info-val" id="hslValue">—</span>
+                    </div>
+                    <div class="info-row name-row">
+                        <span class="info-key">名前</span>
+                        <span class="info-val" id="colorName">—</span>
+                    </div>
+                </div>
+                <button id="saveColorBtn" class="save-btn">
+                    <span>💾</span> 色を保存
+                </button>
+            </div>
 
-        <div id="colorPreview"></div>
+        </aside>
 
-        <div class="colorInfo">
-            <p><strong>HEX:</strong> <span id="hexValue">-</span></p>
-            <p><strong>RGB:</strong> <span id="rgbValue">-</span></p>
-            <p><strong>HSL:</strong> <span id="hslValue">-</span></p>
-            <p><strong>色名:</strong> <span id="colorName">-</span></p>
+        <!-- CENTER: camera / image viewer -->
+        <div class="viewerContainer">
+            <div class="cameraContainer" id="cameraContainer">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="captureCanvas"></canvas>
+                <div id="crosshair"></div>
+                <div id="tapMarker" class="tap-marker hidden"></div>
+                <div class="idle-hint" id="idleHint">
+                    <p>📷 カメラを起動するか</p>
+                    <p>🖼 写真を選択してください</p>
+                </div>
+            </div>
         </div>
 
-        <button id="saveColorBtn">💾 色を保存</button>
+        <!-- RIGHT PANEL: palette analysis -->
+        <aside class="side-panel right-panel">
+            <div class="palette-section">
+                <div class="panel-title">カラー分析</div>
+                <div id="paletteDisplay" class="palette-display">
+                    <div class="palette-placeholder">画像を読み込むと<br>色の割合を表示します</div>
+                </div>
+            </div>
+        </aside>
 
     </div>
 
+    <!-- SAVED COLORS SECTION -->
     <section class="savedSection">
-        <h2>保存した色</h2>
+        <div class="saved-header">
+            <h2>保存した色</h2>
+            <div class="saved-controls">
+                <select id="sortSelect" class="sort-select">
+                    <option value="date-desc">新しい順</option>
+                    <option value="date-asc">古い順</option>
+                    <option value="hue-asc">色相順 (昇順)</option>
+                    <option value="hue-desc">色相順 (降順)</option>
+                    <option value="similar">近似色グループ</option>
+                </select>
+            </div>
+        </div>
         <div id="savedColors"></div>
     </section>
 
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="deleteModal" class="modal hidden">
+    <div class="modal-box">
+        <div id="deleteModalPreview" class="modal-preview"></div>
+        <p class="modal-text">この色を削除しますか？</p>
+        <div class="modal-hex" id="deleteModalHex"></div>
+        <div class="modal-actions">
+            <button id="confirmDeleteBtn" class="modal-btn danger">削除する</button>
+            <button id="cancelDeleteBtn" class="modal-btn cancel">キャンセル</button>
+        </div>
+    </div>
 </div>
 
 <script src="script.js"></script>
