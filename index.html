@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Color Capture</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111111">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+    <header>
+        <h1>Color Capture</h1>
+    </header>
+
+    <div class="controls">
+        <button id="startCameraBtn">📷 カメラ開始</button>
+        <label class="uploadLabel">
+            🖼 写真を選択
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+    </div>
+
+    <div class="cameraContainer">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="captureCanvas"></canvas>
+
+        <div id="crosshair"></div>
+    </div>
+
+    <div class="infoPanel">
+
+        <div id="colorPreview"></div>
+
+        <div class="colorInfo">
+            <p><strong>HEX:</strong> <span id="hexValue">-</span></p>
+            <p><strong>RGB:</strong> <span id="rgbValue">-</span></p>
+            <p><strong>HSL:</strong> <span id="hslValue">-</span></p>
+            <p><strong>色名:</strong> <span id="colorName">-</span></p>
+        </div>
+
+        <button id="saveColorBtn">💾 色を保存</button>
+
+    </div>
+
+    <section class="savedSection">
+        <h2>保存した色</h2>
+        <div id="savedColors"></div>
+    </section>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
