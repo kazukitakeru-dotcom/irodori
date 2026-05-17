@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Color Capture</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon512.png">
+    <link rel="apple-touch-icon" href="icons/icon512.png">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,16 +22,20 @@
         </div>
     </header>
 
-    <!-- Main workspace: side panel + viewer + side panel -->
     <div class="workspace">
 
-        <!-- LEFT PANEL: controls + color info -->
+        <!-- LEFT PANEL -->
         <aside class="side-panel left-panel">
 
             <div class="controls">
                 <button id="startCameraBtn" class="ctrl-btn">
                     <span class="btn-icon">📷</span>
                     <span class="btn-label">カメラ開始</span>
+                </button>
+                <!-- 一時停止ボタン：カメラ起動後のみ表示 -->
+                <button id="pauseCameraBtn" class="ctrl-btn" style="display:none;">
+                    <span class="btn-icon">⏸</span>
+                    <span class="btn-label">一時停止</span>
                 </button>
                 <label class="ctrl-btn uploadLabel">
                     <span class="btn-icon">🖼</span>
@@ -69,7 +73,7 @@
 
         </aside>
 
-        <!-- CENTER: camera / image viewer -->
+        <!-- CENTER: viewer -->
         <div class="viewerContainer">
             <div class="cameraContainer" id="cameraContainer">
                 <video id="video" autoplay playsinline></video>
@@ -83,7 +87,7 @@
             </div>
         </div>
 
-        <!-- RIGHT PANEL: palette analysis -->
+        <!-- RIGHT PANEL -->
         <aside class="side-panel right-panel">
             <div class="palette-section">
                 <div class="panel-title">カラー分析</div>
@@ -95,7 +99,7 @@
 
     </div>
 
-    <!-- SAVED COLORS SECTION -->
+    <!-- SAVED COLORS -->
     <section class="savedSection">
         <div class="saved-header">
             <h2>保存した色</h2>
@@ -114,7 +118,7 @@
 
 </div>
 
-<!-- Delete confirmation modal -->
+<!-- Delete modal -->
 <div id="deleteModal" class="modal hidden">
     <div class="modal-box">
         <div id="deleteModalPreview" class="modal-preview"></div>

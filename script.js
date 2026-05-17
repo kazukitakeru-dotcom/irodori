@@ -1,36 +1,14 @@
 /* ═══════════════════════════════════════════
-   Color Capture – script.js (v3)
+   Color Capture – script.js (v4 bugfix)
 ═══════════════════════════════════════════ */
 
-// ── DOM refs ──
-const video                = document.getElementById("video");
-const canvas               = document.getElementById("captureCanvas");
-const ctx                  = canvas.getContext("2d", { willReadFrequently: true });
-
-const startCameraBtn       = document.getElementById("startCameraBtn");
-const pauseCameraBtn       = document.getElementById("pauseCameraBtn");
-const imageInput           = document.getElementById("imageInput");
-
-const colorPreview         = document.getElementById("colorPreview");
-const hexValue             = document.getElementById("hexValue");
-const rgbValue             = document.getElementById("rgbValue");
-const hslValue             = document.getElementById("hslValue");
-const colorNameEl          = document.getElementById("colorName");
-
-const saveColorBtn         = document.getElementById("saveColorBtn");
-const savedColorsContainer = document.getElementById("savedColors");
-const sortSelect           = document.getElementById("sortSelect");
-
-const paletteDisplay       = document.getElementById("paletteDisplay");
-const tapMarker            = document.getElementById("tapMarker");
-const crosshair            = document.getElementById("crosshair");
-const idleHint             = document.getElementById("idleHint");
-
-const deleteModal          = document.getElementById("deleteModal");
-const deleteModalPreview   = document.getElementById("deleteModalPreview");
-const deleteModalHex       = document.getElementById("deleteModalHex");
-const confirmDeleteBtn     = document.getElementById("confirmDeleteBtn");
-const cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
+// ── DOM refs (全てDOMContentLoaded後に取得) ──
+let video, canvas, ctx;
+let startCameraBtn, pauseCameraBtn, imageInput;
+let colorPreview, hexValue, rgbValue, hslValue, colorNameEl;
+let saveColorBtn, savedColorsContainer, sortSelect;
+let paletteDisplay, tapMarker, crosshair, idleHint;
+let deleteModal, deleteModalPreview, deleteModalHex, confirmDeleteBtn, cancelDeleteBtn;
 
 // ── App state ──
 let currentColor       = null;
@@ -56,9 +34,6 @@ const colorDictionary = [
     { name: "ミルクホワイト",          hex: "#FDFBF6" },
     { name: "リネン",                  hex: "#FAF0E6" },
     { name: "オールドレース",          hex: "#FDF5E6" },
-    { name: "ビスク",                  hex: "#FFE4C4" },
-    { name: "ブランシュアーモンド",    hex: "#FFEBCD" },
-    { name: "パパイヤホイップ",        hex: "#FFEFD5" },
     { name: "ピーチパフ",              hex: "#FFDAB9" },
     { name: "ミスティローズ",          hex: "#FFE4E1" },
     { name: "ラベンダーブラッシュ",    hex: "#FFF0F5" },
@@ -118,7 +93,6 @@ const colorDictionary = [
     { name: "サーモンピンク",          hex: "#FF91A4" },
     { name: "カメオピンク",            hex: "#EFBBCC" },
     { name: "チェリーブロッサム",      hex: "#FFB7C5" },
-    { name: "モーブピンク",            hex: "#E0B0FF" },
     { name: "ダスティピンク",          hex: "#DCAE96" },
     { name: "ミレニアルピンク",        hex: "#F3CFC6" },
     { name: "ヌードピンク",            hex: "#E8C8B0" },
@@ -137,8 +111,6 @@ const colorDictionary = [
     { name: "コーラルオレンジ",        hex: "#FF7F50" },
     { name: "テラコッタ",              hex: "#E2725B" },
     { name: "バーントシエナ",          hex: "#E97451" },
-    { name: "サフランオレンジ",        hex: "#F4A460" },
-    { name: "ピーチオレンジ",          hex: "#FFCBA4" },
     { name: "アプリコット",            hex: "#FBCEB1" },
     { name: "ピュアイエロー",          hex: "#FFFF00" },
     { name: "ゴールデンイエロー",      hex: "#FFC200" },
@@ -174,7 +146,6 @@ const colorDictionary = [
     { name: "アボカドグリーン",        hex: "#568203" },
     { name: "パイングリーン",          hex: "#01796F" },
     { name: "ボトルグリーン",          hex: "#006A4E" },
-    { name: "ダークシーグリーン",      hex: "#8FBC8B" },
     { name: "シーグリーン",            hex: "#2E8B57" },
     { name: "ミディアムシーグリーン",  hex: "#3CB371" },
     { name: "ピュアシアン",            hex: "#00FFFF" },
@@ -185,9 +156,7 @@ const colorDictionary = [
     { name: "ダークターコイズ",        hex: "#00CED1" },
     { name: "ティール",                hex: "#008080" },
     { name: "アクアマリン",            hex: "#7FFFD4" },
-    { name: "カリビアングリーン",      hex: "#00CC99" },
     { name: "ライトシーグリーン",      hex: "#20B2AA" },
-    { name: "ライトブルーグリーン",    hex: "#B0E0E6" },
     { name: "ピュアブルー",            hex: "#0000FF" },
     { name: "ミッドナイトブルー",      hex: "#191970" },
     { name: "ネイビーブルー",          hex: "#000080" },
@@ -207,9 +176,7 @@ const colorDictionary = [
     { name: "ベビーブルー",            hex: "#89CFF0" },
     { name: "ライトブルー",            hex: "#ADD8E6" },
     { name: "パウダーブルー",          hex: "#B0E0E6" },
-    { name: "ペリウィンクルブルー",    hex: "#CCCCFF" },
     { name: "セルリアンブルー",        hex: "#2A52BE" },
-    { name: "エレクトリックブルー",    hex: "#7DF9FF" },
     { name: "デニムブルー",            hex: "#1560BD" },
     { name: "カデットブルー",          hex: "#5F9EA0" },
     { name: "スレートブルー",          hex: "#6A5ACD" },
@@ -233,7 +200,6 @@ const colorDictionary = [
     { name: "マゼンタ",                hex: "#FF00FF" },
     { name: "ダークマゼンタ",          hex: "#8B008B" },
     { name: "ムラサキ",                hex: "#6C3082" },
-    { name: "フーシャ",                hex: "#FF00FF" },
     { name: "ダークブラウン",          hex: "#3B1507" },
     { name: "チョコレートブラウン",    hex: "#3D1C02" },
     { name: "エスプレッソ",            hex: "#4A2512" },
@@ -265,43 +231,98 @@ const colorDictionary = [
 ];
 
 // ══════════════════════════════════════════
-// CAMERA CONTROLS
+// INIT – DOMContentLoaded後に全DOM参照を取得
 // ══════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", () => {
 
-startCameraBtn.addEventListener("click", () => {
-    if (cameraActive) {
-        stopCamera();
-    } else {
-        startCamera();
+    // DOM refs
+    video                = document.getElementById("video");
+    canvas               = document.getElementById("captureCanvas");
+    ctx                  = canvas.getContext("2d", { willReadFrequently: true });
+
+    startCameraBtn       = document.getElementById("startCameraBtn");
+    pauseCameraBtn       = document.getElementById("pauseCameraBtn");
+    imageInput           = document.getElementById("imageInput");
+
+    colorPreview         = document.getElementById("colorPreview");
+    hexValue             = document.getElementById("hexValue");
+    rgbValue             = document.getElementById("rgbValue");
+    hslValue             = document.getElementById("hslValue");
+    colorNameEl          = document.getElementById("colorName");
+
+    saveColorBtn         = document.getElementById("saveColorBtn");
+    savedColorsContainer = document.getElementById("savedColors");
+    sortSelect           = document.getElementById("sortSelect");
+
+    paletteDisplay       = document.getElementById("paletteDisplay");
+    tapMarker            = document.getElementById("tapMarker");
+    crosshair            = document.getElementById("crosshair");
+    idleHint             = document.getElementById("idleHint");
+
+    deleteModal          = document.getElementById("deleteModal");
+    deleteModalPreview   = document.getElementById("deleteModalPreview");
+    deleteModalHex       = document.getElementById("deleteModalHex");
+    confirmDeleteBtn     = document.getElementById("confirmDeleteBtn");
+    cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
+
+    // null チェック（デバッグ用）
+    const required = { startCameraBtn, pauseCameraBtn, imageInput, colorPreview,
+        hexValue, rgbValue, hslValue, colorNameEl, saveColorBtn,
+        savedColorsContainer, sortSelect, paletteDisplay, tapMarker,
+        crosshair, idleHint, deleteModal, deleteModalPreview,
+        deleteModalHex, confirmDeleteBtn, cancelDeleteBtn };
+
+    for (const [name, el] of Object.entries(required)) {
+        if (!el) console.error("Missing element:", name);
     }
+
+    // 初期状態
+    pauseCameraBtn.style.display = "none";
+    crosshair.style.display      = "none";
+
+    // イベント登録
+    startCameraBtn.addEventListener("click", () => {
+        if (cameraActive) stopCamera(); else startCamera();
+    });
+
+    pauseCameraBtn.addEventListener("click", () => {
+        if (!cameraActive) return;
+        if (cameraPaused) resumeCamera(); else pauseCamera();
+    });
+
+    imageInput.addEventListener("change", onImageSelected);
+    saveColorBtn.addEventListener("click", onSaveColor);
+    sortSelect.addEventListener("change", renderSavedColors);
+    confirmDeleteBtn.addEventListener("click", onConfirmDelete);
+    cancelDeleteBtn.addEventListener("click", closeDeleteModal);
+    deleteModal.addEventListener("click", e => { if (e.target === deleteModal) closeDeleteModal(); });
+
+    // 初期描画
+    renderSavedColors();
 });
 
-pauseCameraBtn.addEventListener("click", () => {
-    if (!cameraActive) return;
-    if (cameraPaused) {
-        resumeCamera();
-    } else {
-        pauseCamera();
-    }
-});
+// ══════════════════════════════════════════
+// CAMERA
+// ══════════════════════════════════════════
 
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" }
         });
+
         cameraStream  = stream;
         cameraActive  = true;
         cameraPaused  = false;
         imageMode     = false;
 
-        video.srcObject = stream;
+        video.srcObject      = stream;
         video.style.display  = "block";
         canvas.style.display = "none";
-        idleHint.style.display = "none";
-        crosshair.style.display = "block";
+        canvas.onclick       = null;
+        idleHint.style.display   = "none";
+        crosshair.style.display  = "block";
         tapMarker.classList.add("hidden");
-        canvas.onclick = null;
 
         startCameraBtn.innerHTML = '<span class="btn-icon">⏹</span><span class="btn-label">カメラ停止</span>';
         startCameraBtn.classList.add("stop");
@@ -310,6 +331,7 @@ async function startCamera() {
         pauseCameraBtn.classList.remove("active");
 
         video.addEventListener("loadedmetadata", startRealtimeSampling, { once: true });
+
     } catch (err) {
         alert("カメラ起動に失敗しました:\n" + err.message);
     }
@@ -324,17 +346,18 @@ function stopCamera() {
         cancelAnimationFrame(animFrameId);
         animFrameId = null;
     }
+
     cameraActive  = false;
     cameraPaused  = false;
     imageMode     = false;
 
-    video.srcObject     = null;
-    video.style.display = "block";
+    video.srcObject      = null;
+    video.style.display  = "block";
     canvas.style.display = "none";
-    canvas.onclick = null;
-    crosshair.style.display = "none";
+    canvas.onclick       = null;
+    crosshair.style.display   = "none";
     tapMarker.classList.add("hidden");
-    idleHint.style.display = "flex";
+    idleHint.style.display    = "flex";
 
     startCameraBtn.innerHTML = '<span class="btn-icon">📷</span><span class="btn-label">カメラ開始</span>';
     startCameraBtn.classList.remove("stop");
@@ -345,22 +368,22 @@ function stopCamera() {
 
 function pauseCamera() {
     cameraPaused = true;
-    if (animFrameId) {
-        cancelAnimationFrame(animFrameId);
-        animFrameId = null;
-    }
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
+    // 現フレームをcanvasに焼き付け
     if (video.videoWidth > 0) {
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     }
+
     video.style.display  = "none";
     canvas.style.display = "block";
     crosshair.style.display = "none";
 
     canvas.onclick = function(ev) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
+        const rect   = canvas.getBoundingClientRect();
+        const scaleX = canvas.width  / rect.width;
         const scaleY = canvas.height / rect.height;
         sampleColor((ev.clientX - rect.left) * scaleX, (ev.clientY - rect.top) * scaleY);
         showTapMarker(ev.clientX - rect.left, ev.clientY - rect.top);
@@ -368,18 +391,21 @@ function pauseCamera() {
 
     pauseCameraBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-label">再開</span>';
     pauseCameraBtn.classList.add("active");
+
     analyzePalette();
 }
 
 function resumeCamera() {
-    cameraPaused = false;
-    canvas.onclick = null;
+    cameraPaused       = false;
+    canvas.onclick     = null;
     tapMarker.classList.add("hidden");
     video.style.display  = "block";
     canvas.style.display = "none";
     crosshair.style.display = "block";
+
     pauseCameraBtn.innerHTML = '<span class="btn-icon">⏸</span><span class="btn-label">一時停止</span>';
     pauseCameraBtn.classList.remove("active");
+
     startRealtimeSampling();
 }
 
@@ -401,10 +427,11 @@ function startRealtimeSampling() {
 // IMAGE UPLOAD
 // ══════════════════════════════════════════
 
-imageInput.addEventListener("change", (event) => {
+function onImageSelected(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // カメラを完全停止
     if (cameraActive) stopCamera();
 
     const reader = new FileReader();
@@ -415,11 +442,11 @@ imageInput.addEventListener("change", (event) => {
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
 
-            imageMode = true;
+            imageMode            = true;
             video.style.display  = "none";
             canvas.style.display = "block";
-            idleHint.style.display = "none";
-            crosshair.style.display = "none";
+            idleHint.style.display   = "none";
+            crosshair.style.display  = "none";
             tapMarker.classList.add("hidden");
 
             startCameraBtn.innerHTML = '<span class="btn-icon">📷</span><span class="btn-label">カメラ開始</span>';
@@ -429,7 +456,7 @@ imageInput.addEventListener("change", (event) => {
             analyzePalette();
 
             canvas.onclick = function(ev) {
-                const rect = canvas.getBoundingClientRect();
+                const rect   = canvas.getBoundingClientRect();
                 const scaleX = canvas.width  / rect.width;
                 const scaleY = canvas.height / rect.height;
                 sampleColor((ev.clientX - rect.left) * scaleX, (ev.clientY - rect.top) * scaleY);
@@ -440,7 +467,7 @@ imageInput.addEventListener("change", (event) => {
     };
     reader.readAsDataURL(file);
     imageInput.value = "";
-});
+}
 
 // ══════════════════════════════════════════
 // TAP MARKER
@@ -468,7 +495,9 @@ function sampleColor(x, y) {
 
     const data = ctx.getImageData(sx, sy, sw, sh).data;
     let rSum = 0, gSum = 0, bSum = 0, count = 0;
-    for (let i = 0; i < data.length; i += 4) { rSum += data[i]; gSum += data[i+1]; bSum += data[i+2]; count++; }
+    for (let i = 0; i < data.length; i += 4) {
+        rSum += data[i]; gSum += data[i+1]; bSum += data[i+2]; count++;
+    }
 
     const r = Math.round(rSum / count);
     const g = Math.round(gSum / count);
@@ -503,7 +532,7 @@ function analyzePalette() {
 
     for (let y = 0; y < h; y += step) {
         for (let x = 0; x < w; x += step) {
-            const d = ctx.getImageData(x, y, 1, 1).data;
+            const d   = ctx.getImageData(x, y, 1, 1).data;
             const key = `${Math.round(d[0]/16)*16},${Math.round(d[1]/16)*16},${Math.round(d[2]/16)*16}`;
             freq[key] = (freq[key] || 0) + 1;
         }
@@ -514,7 +543,7 @@ function analyzePalette() {
 
     paletteDisplay.innerHTML = "";
     const title = document.createElement("div");
-    title.className = "panel-title";
+    title.className   = "panel-title";
     title.textContent = "主要カラー";
     paletteDisplay.appendChild(title);
 
@@ -528,10 +557,10 @@ function analyzePalette() {
         row.className = "palette-bar-row";
 
         const bar  = document.createElement("div");
-        bar.className = "palette-bar-color";
+        bar.className        = "palette-bar-color";
         bar.style.background = hex;
-        bar.style.width = `${Math.max(pct, 8)}%`;
-        bar.title = `${name} – ${hex}`;
+        bar.style.width      = `${Math.max(pct, 8)}%`;
+        bar.title            = `${name} – ${hex}`;
         bar.addEventListener("click", () => {
             const h2 = rgbToHsl(r, g, b);
             currentColor = { hex, rgb: `(${r}, ${g}, ${b})`, hsl: `(${h2.h}, ${h2.s}%, ${h2.l}%)`, name, timestamp: Date.now() };
@@ -539,8 +568,8 @@ function analyzePalette() {
         });
 
         const info = document.createElement("div");
-        info.className = "palette-bar-info";
-        info.innerHTML = `<span>${hex}</span><span class="palette-percentage">${pct}%</span>`;
+        info.className   = "palette-bar-info";
+        info.innerHTML   = `<span>${hex}</span><span class="palette-percentage">${pct}%</span>`;
 
         row.appendChild(bar);
         row.appendChild(info);
@@ -552,18 +581,16 @@ function analyzePalette() {
 // SAVE / RENDER
 // ══════════════════════════════════════════
 
-saveColorBtn.addEventListener("click", () => {
+function onSaveColor() {
     if (!currentColor) return;
     const saved = getSaved();
     saved.unshift({ ...currentColor, timestamp: Date.now() });
     setSaved(saved);
     renderSavedColors();
-});
+}
 
 function getSaved() { return JSON.parse(localStorage.getItem("savedColors") || "[]"); }
 function setSaved(arr) { localStorage.setItem("savedColors", JSON.stringify(arr)); }
-
-sortSelect.addEventListener("change", renderSavedColors);
 
 function renderSavedColors() {
     const saved  = getSaved();
@@ -622,22 +649,22 @@ function renderGrouped(sorted, saved) {
         const { r, g, b } = hexToRgb(color.hex);
         const { h, s, l } = rgbToHsl(r, g, b);
 
-        if (l < 18)                                  { groups["⬛ ダーク系"].push(color); }
-        else if (l > 82 || s < 12)                   { groups["⬜ ライト系"].push(color); }
-        else if (h >= 10 && h < 40 && l < 55)        { groups["🤎 ブラウン系"].push(color); }
-        else if ((h >= 340 || h < 10) && s > 30)     { groups["🔴 レッド系"].push(color); }
-        else if (h >= 290 && h < 340)                { groups["🩷 ピンク系"].push(color); }
-        else if (h >= 10 && h < 45)                  { groups["🟠 オレンジ系"].push(color); }
-        else if (h >= 45 && h < 75)                  { groups["🟡 イエロー系"].push(color); }
-        else if (h >= 75 && h < 165)                 { groups["🟢 グリーン系"].push(color); }
-        else if (h >= 165 && h < 260)                { groups["🔵 ブルー系"].push(color); }
-        else                                         { groups["🟣 パープル系"].push(color); }
+        if      (l < 18)                              groups["⬛ ダーク系"].push(color);
+        else if (l > 82 || s < 12)                    groups["⬜ ライト系"].push(color);
+        else if (h >= 10 && h < 40 && l < 55)         groups["🤎 ブラウン系"].push(color);
+        else if ((h >= 340 || h < 10) && s > 30)      groups["🔴 レッド系"].push(color);
+        else if (h >= 290 && h < 340)                 groups["🩷 ピンク系"].push(color);
+        else if (h >= 10 && h < 45)                   groups["🟠 オレンジ系"].push(color);
+        else if (h >= 45 && h < 75)                   groups["🟡 イエロー系"].push(color);
+        else if (h >= 75 && h < 165)                  groups["🟢 グリーン系"].push(color);
+        else if (h >= 165 && h < 260)                 groups["🔵 ブルー系"].push(color);
+        else                                          groups["🟣 パープル系"].push(color);
     }
 
     for (const [groupName, colors] of Object.entries(groups)) {
         if (colors.length === 0) continue;
         const label = document.createElement("div");
-        label.className = "group-label";
+        label.className   = "group-label";
         label.textContent = groupName;
         savedColorsContainer.appendChild(label);
         colors.forEach(color => {
@@ -678,9 +705,9 @@ function makeCard(color, originalIndex) {
 // ══════════════════════════════════════════
 
 function openDeleteModal(index, color) {
-    pendingDeleteIndex = index;
+    pendingDeleteIndex               = index;
     deleteModalPreview.style.background = color.hex;
-    deleteModalHex.textContent = `${color.hex}  ${color.name}`;
+    deleteModalHex.textContent       = `${color.hex}　${color.name}`;
     deleteModal.classList.remove("hidden");
 }
 
@@ -689,20 +716,14 @@ function closeDeleteModal() {
     deleteModal.classList.add("hidden");
 }
 
-confirmDeleteBtn.addEventListener("click", () => {
+function onConfirmDelete() {
     if (pendingDeleteIndex === null) return;
     const saved = getSaved();
     saved.splice(pendingDeleteIndex, 1);
     setSaved(saved);
     renderSavedColors();
     closeDeleteModal();
-});
-
-cancelDeleteBtn.addEventListener("click", closeDeleteModal);
-
-deleteModal.addEventListener("click", e => {
-    if (e.target === deleteModal) closeDeleteModal();
-});
+}
 
 // ══════════════════════════════════════════
 // COLOUR MATH
@@ -750,14 +771,7 @@ function getNearestColorName(hex) {
     return nearest.name;
 }
 
-// ══════════════════════════════════════════
-// SERVICE WORKER & INIT
-// ══════════════════════════════════════════
-
+// ── Service Worker ──
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
-
-pauseCameraBtn.style.display = "none";
-crosshair.style.display = "none";
-renderSavedColors();
