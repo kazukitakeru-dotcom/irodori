@@ -460,6 +460,40 @@ video,
     border-color: var(--accent);
 }
 
+.saved-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.io-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.io-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.import-label-btn input[type="file"] {
+    display: none;
+}
+
 #savedColors {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -523,6 +557,55 @@ video,
     gap: 2px;
     font-family: var(--font-mono);
     color: var(--text-muted);
+}
+
+.card-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.card-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.card-val-muted {
+    opacity: 0.6;
+    text-align: right;
+    word-break: break-all;
+}
+
+.card-memo {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 6px 10px;
+    min-height: 28px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    outline: none;
+    word-break: break-word;
+}
+
+.card-memo:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.35;
+}
+
+.card-memo[contenteditable="true"] {
+    background: var(--surface2);
+    color: var(--text);
+}
+
+.card-memo:hover {
+    background: var(--surface2);
 }
 
 .saved-color-name {
@@ -620,6 +703,29 @@ video,
     width: 100%;
 }
 
+.memo-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 10px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+}
+
+.memo-textarea:focus {
+    border-color: var(--accent);
+}
+
+.modal-btn.confirm-save {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+}
+
 .modal-btn {
     flex: 1;
     padding: 10px;
@@ -654,23 +760,29 @@ video,
         min-height: auto;
     }
 
-    .side-panel {
-        width: 100%;
-        position: static;
-        height: auto;
-        flex-direction: row;
-        flex-wrap: wrap;
+    .viewerContainer {
+        order: -1;
+        padding: 10px 10px 0;
+    }
+
+    .left-panel {
+        order: 0;
+        flex-direction: column;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
-    .left-panel {
-        flex-direction: column;
-    }
-
     .right-panel {
+        order: 1;
         border-left: none;
         border-top: 1px solid var(--border);
+    }
+
+    .side-panel {
+        width: 100%;
+        position: static;
+        height: auto;
+        flex-wrap: wrap;
     }
 
     .infoPanel {
@@ -694,8 +806,8 @@ video,
         aspect-ratio: 4 / 3;
     }
 
-    .viewerContainer {
-        padding: 12px;
+    #colorPreview {
+        height: 60px;
     }
 }
 

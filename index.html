@@ -104,6 +104,11 @@
         <div class="saved-header">
             <h2>保存した色</h2>
             <div class="saved-controls">
+                <button id="exportBtn" class="io-btn">⬆️ エクスポート</button>
+                <label class="io-btn import-label-btn">
+                    ⬇️ インポート
+                    <input type="file" id="importInput" accept=".json">
+                </label>
                 <select id="sortSelect" class="sort-select">
                     <option value="date-desc">新しい順</option>
                     <option value="date-asc">古い順</option>
@@ -116,6 +121,20 @@
         <div id="savedColors"></div>
     </section>
 
+</div>
+
+<!-- Save memo modal -->
+<div id="saveMemoModal" class="modal hidden">
+    <div class="modal-box">
+        <div id="saveMemoPreview" class="modal-preview"></div>
+        <p class="modal-text" id="saveMemoName"></p>
+        <div class="modal-hex" id="saveMemoHex"></div>
+        <textarea id="saveMemoInput" class="memo-textarea" placeholder="メモを入力（任意）" rows="3"></textarea>
+        <div class="modal-actions">
+            <button id="confirmSaveBtn" class="modal-btn confirm-save">保存する</button>
+            <button id="cancelSaveBtn" class="modal-btn cancel">キャンセル</button>
+        </div>
+    </div>
 </div>
 
 <!-- Delete modal -->

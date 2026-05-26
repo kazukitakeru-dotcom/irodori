@@ -9,6 +9,8 @@ let colorPreview, hexValue, rgbValue, hslValue, colorNameEl;
 let saveColorBtn, savedColorsContainer, sortSelect;
 let paletteDisplay, tapMarker, crosshair, idleHint;
 let deleteModal, deleteModalPreview, deleteModalHex, confirmDeleteBtn, cancelDeleteBtn;
+let saveMemoModal, saveMemoPreview, saveMemoName, saveMemoInput, confirmSaveBtn, cancelSaveBtn;
+let exportBtn, importInput;
 
 // ── App state ──
 let currentColor       = null;
@@ -228,6 +230,34 @@ const colorDictionary = [
     { name: "マッシュルーム",          hex: "#B5A08E" },
     { name: "タウプ",                  hex: "#483C32" },
     { name: "サンド",                  hex: "#C2B280" },
+    // ── 和色 ──
+    { name: "藍色",                   hex: "#165E83" },
+    { name: "浅葱色",                 hex: "#00A3AF" },
+    { name: "萌黄",                   hex: "#6DBB37" },
+    { name: "山吹色",                 hex: "#FCB813" },
+    { name: "朱色",                   hex: "#DF4040" },
+    { name: "緋色",                   hex: "#CD2A1D" },
+    { name: "鴇色",                   hex: "#F2A0A1" },
+    { name: "桃色",                   hex: "#F2AACC" },
+    { name: "茶色",                   hex: "#945116" },
+    { name: "栗色",                   hex: "#7B3F00" },
+    { name: "若草色",                 hex: "#7EC84B" },
+    { name: "銀鼠",                   hex: "#97938A" },
+    { name: "紅色",                   hex: "#E2041B" },
+    { name: "橙色",                   hex: "#F08300" },
+    { name: "水色",                   hex: "#A0D8EF" },
+    { name: "抹茶色",                 hex: "#8DB255" },
+    // ── 追加西洋色 ──
+    { name: "バーミリオン",           hex: "#E34234" },
+    { name: "ダークオリーブグリーン", hex: "#556B2F" },
+    { name: "カーキ",                 hex: "#C3B091" },
+    { name: "ペリウィンクル",         hex: "#CCCCFF" },
+    { name: "ピスタチオ",             hex: "#93C572" },
+    { name: "ウォームグレー",         hex: "#9B9390" },
+    { name: "スモーキーグリーン",     hex: "#738276" },
+    { name: "ロゼ",                   hex: "#FFAAB5" },
+    { name: "ミルキーホワイト",       hex: "#F8F4E6" },
+    { name: "ペールゴールド",         hex: "#E8D5A3" },
 ];
 
 // ══════════════════════════════════════════
@@ -265,12 +295,24 @@ document.addEventListener("DOMContentLoaded", () => {
     confirmDeleteBtn     = document.getElementById("confirmDeleteBtn");
     cancelDeleteBtn      = document.getElementById("cancelDeleteBtn");
 
+    saveMemoModal        = document.getElementById("saveMemoModal");
+    saveMemoPreview      = document.getElementById("saveMemoPreview");
+    saveMemoName         = document.getElementById("saveMemoName");
+    saveMemoInput        = document.getElementById("saveMemoInput");
+    confirmSaveBtn       = document.getElementById("confirmSaveBtn");
+    cancelSaveBtn        = document.getElementById("cancelSaveBtn");
+
+    exportBtn            = document.getElementById("exportBtn");
+    importInput          = document.getElementById("importInput");
+
     // null チェック（デバッグ用）
     const required = { startCameraBtn, pauseCameraBtn, imageInput, colorPreview,
         hexValue, rgbValue, hslValue, colorNameEl, saveColorBtn,
         savedColorsContainer, sortSelect, paletteDisplay, tapMarker,
         crosshair, idleHint, deleteModal, deleteModalPreview,
-        deleteModalHex, confirmDeleteBtn, cancelDeleteBtn };
+        deleteModalHex, confirmDeleteBtn, cancelDeleteBtn,
+        saveMemoModal, saveMemoPreview, saveMemoName, saveMemoInput,
+        confirmSaveBtn, cancelSaveBtn, exportBtn, importInput };
 
     for (const [name, el] of Object.entries(required)) {
         if (!el) console.error("Missing element:", name);
@@ -296,6 +338,14 @@ document.addEventListener("DOMContentLoaded", () => {
     confirmDeleteBtn.addEventListener("click", onConfirmDelete);
     cancelDeleteBtn.addEventListener("click", closeDeleteModal);
     deleteModal.addEventListener("click", e => { if (e.target === deleteModal) closeDeleteModal(); });
+
+    confirmSaveBtn.addEventListener("click", onConfirmSave);
+    cancelSaveBtn.addEventListener("click", closeSaveMemoModal);
+    saveMemoModal.addEventListener("click", e => { if (e.target === saveMemoModal) closeSaveMemoModal(); });
+    saveMemoInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onConfirmSave(); } });
+
+    exportBtn.addEventListener("click", exportColors);
+    importInput.addEventListener("change", onImport);
 
     // 初期描画
     renderSavedColors();
@@ -583,10 +633,79 @@ function analyzePalette() {
 
 function onSaveColor() {
     if (!currentColor) return;
+    openSaveMemoModal();
+}
+
+function openSaveMemoModal() {
+    saveMemoPreview.style.background = currentColor.hex;
+    saveMemoName.textContent         = currentColor.name;
+    saveMemoInput.value              = "";
+    const saveMemoHexEl = document.getElementById("saveMemoHex");
+    if (saveMemoHexEl) saveMemoHexEl.textContent = currentColor.hex;
+    saveMemoModal.classList.remove("hidden");
+    setTimeout(() => saveMemoInput.focus(), 100);
+}
+
+function closeSaveMemoModal() {
+    saveMemoModal.classList.add("hidden");
+    saveMemoInput.value = "";
+}
+
+function onConfirmSave() {
+    if (!currentColor) return;
+    const memo  = saveMemoInput.value.trim();
     const saved = getSaved();
-    saved.unshift({ ...currentColor, timestamp: Date.now() });
+    saved.unshift({ ...currentColor, memo, timestamp: Date.now() });
     setSaved(saved);
     renderSavedColors();
+    closeSaveMemoModal();
+}
+
+function exportColors() {
+    const saved = getSaved();
+    if (saved.length === 0) { alert("保存された色がありません"); return; }
+    const blob = new Blob([JSON.stringify(saved, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `color-capture-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function onImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) throw new Error("フォーマットが正しくありません");
+            const saved = getSaved();
+            const existingTs = new Set(saved.map(c => c.timestamp));
+            const newColors  = imported.filter(c => c.hex && !existingTs.has(c.timestamp));
+            const merged     = [...newColors, ...saved];
+            setSaved(merged);
+            renderSavedColors();
+            alert(`${newColors.length}件の色をインポートしました`);
+        } catch (err) {
+            alert("インポートに失敗しました: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+}
+
+function saveMemo(index, memo) {
+    const saved = getSaved();
+    if (index >= 0 && index < saved.length) {
+        saved[index].memo = memo;
+        setSaved(saved);
+    }
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function getSaved() { return JSON.parse(localStorage.getItem("savedColors") || "[]"); }
@@ -678,15 +797,48 @@ function makeCard(color, originalIndex) {
     const card = document.createElement("div");
     card.className = "savedColorCard";
 
+    const hslStr = color.hsl || (() => {
+        const { r, g, b } = hexToRgb(color.hex);
+        const { h, s, l } = rgbToHsl(r, g, b);
+        return `(${h}, ${s}%, ${l}%)`;
+    })();
+
+    const memoText = color.memo ? escapeHtml(color.memo) : "";
+
     card.innerHTML = `
         <div class="savedColorPreview" style="background:${color.hex}" title="クリックで選択"></div>
         <div class="savedColorInfo">
             <div class="saved-color-name">${color.name}</div>
-            <div>${color.hex}</div>
-            <div style="opacity:0.6">${color.rgb}</div>
+            <div class="card-info-row"><span class="card-label">HEX</span><span>${color.hex}</span></div>
+            <div class="card-info-row"><span class="card-label">RGB</span><span class="card-val-muted">${color.rgb}</span></div>
+            <div class="card-info-row"><span class="card-label">HSL</span><span class="card-val-muted">${hslStr}</span></div>
         </div>
+        <div class="card-memo" contenteditable="false" data-placeholder="📝 メモを追加...">${memoText}</div>
         <button class="deleteBtn">削除</button>
     `;
+
+    const memoEl = card.querySelector(".card-memo");
+
+    memoEl.addEventListener("click", () => {
+        memoEl.contentEditable = "true";
+        memoEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(memoEl);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    });
+
+    memoEl.addEventListener("blur", () => {
+        memoEl.contentEditable = "false";
+        saveMemo(originalIndex, memoEl.textContent.trim());
+    });
+
+    memoEl.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); memoEl.blur(); }
+        if (e.key === "Escape") { memoEl.blur(); }
+    });
 
     card.querySelector(".savedColorPreview").addEventListener("click", () => {
         currentColor = { ...color };
